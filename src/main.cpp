@@ -31,16 +31,106 @@ const char *fragment_frag = R"END(
 #define SCREEN_Y (720/2)
 layout(location=0)uniform int ti;
 layout(location=1)uniform sampler2D img;
-float t,l,v,f,z,i=0,m=2,n=.3,r=0;
-vec3 y;
-int S=0;
+//float t,l,v,f,z,i=0,m=2,n=.3,r=0;
+float t;
 
+/*
 vec3 func(vec2 pos) {
 	float d = length(pos - vec2(1.0) + 0.5*vec2(cos(t), sin(t*2.0)));
 	if (d < 0.1) return vec3(1.0);
 	return vec3(0.0);
 }
+*/
 
+
+float rand(in vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))*
+        43758.5453123);
+}
+
+void pR(inout vec2 p, float a) {
+	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+float snoise(in vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = rand(i);
+    float b = rand(i + vec2(1.0, 0.0));
+    float c = rand(i + vec2(0.0, 1.0));
+    float d = rand(i + vec2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    vec2 u = f*f*(3.0-2.0*f);
+    // u = smoothstep(0.,1.,f);
+
+    // Mix 4 coorners porcentages
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+// Repeat in three dimensions
+vec3 pMod3(inout vec3 p, vec3 size) {
+	vec3 c = floor((p + size*0.5)/size);
+	p = mod(p + size*0.5, size) - size*0.5;
+	return c;
+}
+
+vec3 field(vec3 p, float t) {
+    p.z += t*2.0;
+    //vec3 col = abs(sin(p));
+    vec3 col = vec3(1.0, 0.5, 0.0);
+    float ofs = pow(snoise(p.xz), 2.0);
+	vec3 cluster = pMod3(p, vec3(1.0));
+    return col*vec3(2e-3)/(length(p) + ofs);
+}
+
+vec3 march(vec2 uv, float t) {
+	vec3 c = vec3(1.0, 0.0, 0.0);
+    vec3 origin = vec3(uv - vec2(0.5, 0.25), 1.0);
+    origin.y += 0.1;
+    pR(origin.xy, t*0.2);
+    pR(origin.xz, t*0.2);
+    vec3 dir = normalize(origin);
+    vec3 p = origin;
+    //p.xy += 0.4*vec2(cos(t), sin(t));
+    vec3 accum = vec3(0.);
+    for (int i=0;i<50;i++) {
+        vec3 d = field(p, t);
+        accum += d;
+            
+        
+    	p += dir * 1e-3 * 1.0/length(d);
+    }
+    
+    float boost = pow(max(accum.x, max(accum.y, accum.z)), 2.0);
+    return accum + vec3(boost);
+}
+
+void main()
+{
+    float t = ti/44100.;
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
+    vec2 p = vec2(uv.x, uv.y * (float(SCREEN_Y)/SCREEN_X));
+
+    vec2 ncoord = p + vec2(sin(t*199.), sin(t*238.));
+    
+    vec3 new = pow(march(p, t), vec3(2.0));
+    new = clamp(new, vec3(0.0), vec3(1.0));
+	new += texture(img, uv * 0.5).rgb*0.90 - 1.0/255.0;
+    
+    // Output to screen
+    gl_FragColor = vec4(new,1.0);
+}
+
+/*
 void main()
 {
 	t=ti/44100.;
@@ -48,6 +138,7 @@ void main()
 	vec3 c = func(fc) + texture(img, fc * 0.5).rgb*0.90 - 1.0/255.0;
 	gl_FragColor=vec4(c, 1.0);
 	};	
+*/
 )END";
 //#include "shaders/fragment.inl"
 #if TWO_PASS
@@ -91,6 +182,7 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			shaderDebug(post_frag, FAIL_KILL);
 		#endif
 	#endif
+	CHECK_ERRORS();
 
 	// initialize sound
 	#ifndef EDITOR_CONTROLS
@@ -119,11 +211,14 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 		// render with the primary shader
 		((PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram"))(pid);
+		CHECK_ERRORS();
 
 		glBindTexture(GL_TEXTURE_2D, 1);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		((PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture"))(GL_TEXTURE0);
+		CHECK_ERRORS();
 		((PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i"))(1, 0);
+		CHECK_ERRORS();
 		// copy GL_BACK -> GL_TEXTURE_2D
 		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 0, 0, XRES, YRES, 0);
 		CHECK_ERRORS();
