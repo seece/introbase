@@ -30,12 +30,13 @@ const char *fragment_frag = R"END(
 #define SCREEN_X (1280/2)
 #define SCREEN_Y (720/2)
 layout(location=0)uniform int ti;
+layout(location=1)uniform sampler2D img;
 float t,l,v,f,z,i=0,m=2,n=.3,r=0;
 vec3 y;
 int S=0;
 
 vec3 func(vec2 pos) {
-	float d = length(pos - vec2(1.0) + 0.5*vec2(cos(t), sin(t)));
+	float d = length(pos - vec2(1.0) + 0.5*vec2(cos(t), sin(t*2.0)));
 	if (d < 0.1) return vec3(1.0);
 	return vec3(0.0);
 }
@@ -44,7 +45,7 @@ void main()
 {
 	t=ti/44100.;
 	vec2 fc = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
-	vec3 c = func(fc);
+	vec3 c = func(fc) + texture(img, fc * 0.5).rgb*0.90 - 1.0/255.0;
 	gl_FragColor=vec4(c, 1.0);
 	};	
 )END";
@@ -118,6 +119,16 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 		// render with the primary shader
 		((PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram"))(pid);
+
+		glBindTexture(GL_TEXTURE_2D, 1);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		((PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture"))(GL_TEXTURE0);
+		((PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i"))(1, 0);
+		// copy GL_BACK -> GL_TEXTURE_2D
+		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 0, 0, XRES, YRES, 0);
+		CHECK_ERRORS();
+		
+
 		#ifndef EDITOR_CONTROLS
 			// if you don't have an audio system figure some other way to pass time to your shader
 			#if USE_AUDIO
