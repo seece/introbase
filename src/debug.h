@@ -77,6 +77,7 @@ static bool shaderDebug(const char* shader, bool kill_on_failure = true)
 
 #define STRINGIFY2(x) #x // Thanks sooda!
 #define STRINGIFY(x) STRINGIFY2(x)
+
 #define CHECK_ERRORS() assertGlError(STRINGIFY(__LINE__))
 
 #ifdef EDITOR_CONTROLS

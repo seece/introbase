@@ -19,6 +19,8 @@
 #include "definitions.h"
 #if OPENGL_DEBUG
 	#include "debug.h"
+#else
+	#define CHECK_ERRORS() // TODO this should be defined inside debug.h
 #endif
 
 #define GLSL(version, shader)  "#version " #version "\n" #shader
@@ -29,7 +31,7 @@ const char *fragment_frag = R"END(
 #version 430
 #define SCREEN_X (1280/2)
 #define SCREEN_Y (720/2)
-layout(location=0)uniform int ti;
+layout(location=0)uniform float ti;
 layout(location=1)uniform sampler2D img;
 //float t,l,v,f,z,i=0,m=2,n=.3,r=0;
 float t;
@@ -115,7 +117,7 @@ vec3 march(vec2 uv, float t) {
 
 void main()
 {
-    float t = ti/44100.;
+    float t = ti;
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
     vec2 p = vec2(uv.x, uv.y * (float(SCREEN_Y)/SCREEN_X));
@@ -145,6 +147,20 @@ void main()
 	#pragma data_seg(".shader") 
 	#include "shaders/post.inl"
 #endif
+
+static float timeInTicks;
+
+void WINAPI threadDummy(void* param) {
+	/* for (int i = 0; i < 44100 * 2; i++) {
+		Oidos_MusicBuffer[i].left = i * 9000;
+		Oidos_MusicBuffer[i].right = i * 9990;
+	} */
+	Oidos_GenerateMusic();
+	int a = 0;
+	a += 1;
+}
+
+#include <cstdio>
 
 #ifndef EDITOR_CONTROLS
 void entrypoint(void)
@@ -187,10 +203,23 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	// initialize sound
 	#ifndef EDITOR_CONTROLS
 		#if USE_AUDIO
-			CreateThread(0, 0, (LPTHREAD_START_ROUTINE)_4klang_render, lpSoundBuffer, 0, 0);
-			waveOutOpen(&hWaveOut, WAVE_MAPPER, &WaveFMT, NULL, 0, CALLBACK_NULL);
-			waveOutPrepareHeader(hWaveOut, &WaveHDR, sizeof(WaveHDR));
-			waveOutWrite(hWaveOut, &WaveHDR, sizeof(WaveHDR));
+			Oidos_FillRandomData();
+			sample before = Oidos_MusicBuffer[20*44100];
+			HANDLE result = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)threadDummy, 0, 0, 0);
+
+			//Oidos_GenerateMusic();
+			Sleep(30000);
+
+			Oidos_StartMusic();
+			sample after = Oidos_MusicBuffer[20*44100];
+			// FILE* fp = fopen("file.raw", "rw");
+			// fwrite(Oidos_MusicBuffer, sizeof(sample), 44100 * 30, fp);
+			// fclose(fp);
+
+			//CreateThread(0, 0, (LPTHREAD_START_ROUTINE)_4klang_render, lpSoundBuffer, 0, 0);
+			//waveOutOpen(&hWaveOut, WAVE_MAPPER, &WaveFMT, NULL, 0, CALLBACK_NULL);
+			//waveOutPrepareHeader(hWaveOut, &WaveHDR, sizeof(WaveHDR));
+			//waveOutWrite(hWaveOut, &WaveHDR, sizeof(WaveHDR));
 		#endif
 	#else
 		long double position = 0.0;
@@ -227,41 +256,21 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		#ifndef EDITOR_CONTROLS
 			// if you don't have an audio system figure some other way to pass time to your shader
 			#if USE_AUDIO
-				waveOutGetPosition(hWaveOut, &MMTime, sizeof(MMTIME));
+				//waveOutGetPosition(hWaveOut, &MMTime, sizeof(MMTIME));
+				timeInTicks = Oidos_GetPosition(); 
 				// it is possible to upload your vars as vertex color attribute (gl_Color) to save one function import
 				#if NO_UNIFORMS
-					glColor3ui(MMTime.u.sample, 0, 0);
+					#error not implemented
+					//glColor3ui(MMTime.u.sample, 0, 0);
 				#else
-					// remember to divide your shader time variable with the SAMPLE_RATE (44100 with 4klang)
-					((PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i"))(0, MMTime.u.sample);
+					((PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f"))(0, timeInTicks/Oidos_TicksPerSecond);
 				#endif
 			#endif
 		#else
-		#if TWO_PASS
-			refreshShaders(pid, pi2);
-	#endif
 			position = track.getTime();
 			((PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i"))(0, ((int)(position*44100.0)));
 		#endif
 		glRects(-1, -1, 1, 1);
-
-		// render "post process" using the opengl backbuffer
-		#if TWO_PASS
-			glBindTexture(GL_TEXTURE_2D, 1);
-			#if USE_MIPMAPS
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-				glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 0, 0, XRES, YRES, 0);
-				((PFNGLGENERATEMIPMAPPROC)wglGetProcAddress("glGenerateMipmap"))(GL_TEXTURE_2D);
-			#else
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				// copies from GL_BACK (double buffering is enabled) to currently bound image
-				glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 0, 0, XRES, YRES, 0);
-			#endif
-			((PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture"))(GL_TEXTURE0);
-			((PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram"))(pi2);
-			((PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i"))(0, 0);
-			glRects(-1, -1, 1, 1);
-		#endif
 
 		SwapBuffers(hDC);
 
@@ -283,9 +292,10 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 				}
 			}
 		#endif
-	} while(!GetAsyncKeyState(VK_ESCAPE)
+	} while (!GetAsyncKeyState(VK_ESCAPE)
 		#if USE_AUDIO
-			&& MMTime.u.sample < MAX_SAMPLES
+		//&& MMTime.u.sample < MAX_SAMPLES
+		//&& timeInTicks < Oidos_MusicLength
 		#endif
 	);
 

@@ -1,0 +1,1 @@
+shader_minifier_114cce.exe -v --preserve-externals -o .\src\shaders\fragment.inl .\src\shaders\fragment.frag

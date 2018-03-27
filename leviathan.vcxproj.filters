@@ -5,7 +5,6 @@
     <ClCompile Include="src\song.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\4klang\4klang.h" />
     <ClInclude Include="src\debug.h" />
     <ClInclude Include="src\definitions.h" />
     <ClInclude Include="src\glext.h">
@@ -15,6 +14,7 @@
       <Filter>ext</Filter>
     </ClInclude>
     <ClInclude Include="src\song.h" />
+    <ClInclude Include="src\oidos\player\oidos.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\post.inl">
@@ -30,6 +30,9 @@
     </Filter>
     <Filter Include="shaders">
       <UniqueIdentifier>{84f225d6-acf8-4151-aab3-e246410cdeba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="oidos">
+      <UniqueIdentifier>{b566ed58-2ac9-4d6d-a8c6-19cce546e5fb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

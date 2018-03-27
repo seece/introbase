@@ -1,0 +1,205 @@
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>del /q temp\* 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>del music.exe 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>del music_wav.exe 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>..\convert\OidosConvert.exe music.xrns temp\music.asm 
+New timing format: 440 ticks per minute
+
+
+Music length: 216 ticks at 440.00 ticks per minute
+
+Tracks with reverb:
+
+00|VST: Oidos ()
+ Burden:     modes x fat x tones x longest = 15 x 6 x 3 x 17.833 = 4815
+ Tones:      C#2:1 F-2:1 B-2:1
+ Velocities: 08:2 30:1 (4 bits)
+ Track 01, column 1
+  Lengths:   76:1 124:1
+  Notes:     C#2/08:1 F-2/30:1
+ Track 01, column 2
+  Lengths:   76:1
+  Notes:     B-2/08:1
+
+Tracks without reverb:
+
+01|Single_violin_01
+ Burden:     modes x fat x tones x longest = 16 x 45 x 11 x 17.833 = 141237
+ Tones:      G#2:1 B-2:1 C-3:1 C#3:1 D#3:2 F-3:1 F#3:1 G-3:1 G#3:1 A#3:1 C-4:1
+ Velocities: 2C:1 34:2 38:1 3E:1 3F:1 43:1 49:1 4E:1 4F:1 56:1 7F:1 (7 bits)
+ Track 02, column 3
+  Lengths:   64:1 124:1
+  Notes:     G#2/4E:1 C-3/4F:1
+ Track 02, column 4
+  Lengths:   64:1 124:1
+  Notes:     B-2/56:1 D#3/34:1
+ Track 02, column 5
+  Lengths:   64:1 124:1
+  Notes:     C#3/49:1 F-3/34:1
+ Track 02, column 6
+  Lengths:   64:1 124:1
+  Notes:     D#3/2C:1 G-3/38:1
+ Track 02, column 7
+  Lengths:   64:1 124:1
+  Notes:     F#3/43:1 A#3/3E:1
+ Track 02, column 8
+  Lengths:   64:1 124:1
+  Notes:     G#3/7F:1 C-4/3F:1
+
+02|tsih
+ Burden:     modes x fat x tones x longest = 40 x 10 x 2 x 17.833 = 14266
+ Tones:      C-4:1 D#4:1
+ Velocities: 15:2 (7 bits)
+ Track 03, column 1
+  Lengths:   64:1 124:1
+  Notes:     C-4/15:1 D#4/15:1
+
+03|swoosh
+ Burden:     modes x fat x tones x longest = 24 x 30 x 6 x 5.944 = 25679
+ Tones:      C-2:1 C#2:1 F-2:1 G-3:1 C-4:1 C#4:1
+ Velocities: 10:6 (3 bits)
+ Track 04, column 1
+  Lengths:   18:1 19:1
+  Notes:     C-2/10:1 C-4/10:1
+ Track 04, column 2
+  Lengths:   20:1 23:1
+  Notes:     C#2/10:1 C#4/10:1
+ Track 04, column 3
+  Lengths:   24:1 26:1
+  Notes:     F-2/10:1 G-3/10:1
+
+Total burden: 185997 (approximately 0m37s on a fast CPU)
+
+Wrote file temp\music.asm
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>copy ..\player\oidos.asm temp 
+        1 file(s) copied.
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>copy ..\player\random.asm temp 
+        1 file(s) copied.
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>copy ..\player\oidos.inc temp 
+        1 file(s) copied.
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>copy ..\player\play.asm temp 
+        1 file(s) copied.
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>copy music.txt temp 
+        1 file(s) copied.
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>copy wav_filename.txt temp 
+        1 file(s) copied.
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>cd temp 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe\temp>..\tools\nasmw -f win32 oidos.asm -o oidos.obj 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe\temp>..\tools\nasmw -f win32 random.asm -o random.obj 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe\temp>..\tools\nasmw -f win32 play.asm -o play.obj 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe\temp>..\tools\nasmw -f win32 -dWRITE_WAV play.asm -o play_wav.obj 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe\temp>cd .. 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>tools\crinkler20\crinkler temp\oidos.obj temp\random.obj temp\play.obj /OUT:music.exe /ENTRY:main tools\kernel32.lib tools\user32.lib tools\winmm.lib tools\msvcrt_old.lib @crinkler_options.txt 
+Crinkler 2.0 (Jul 28 2015) (c) 2005-2015 Aske Simon Christensen & Rune Stubbe
+
+Target: music.exe
+Tiny compressor: NO
+Tiny import: NO
+Subsystem type: CONSOLE
+Large address aware: NO
+Compression mode: INSTANT
+Saturate counters: NO
+Hash size: 100 MB
+Hash tries: 20
+Order tries: 0
+Report: NONE
+Transforms: NONE
+Replace DLLs: NONE
+Fallback DLLs: NONE
+Range DLLs: NONE
+Exports: NONE
+
+Loading temp\oidos.obj...
+Loading temp\random.obj...
+Loading temp\play.obj...
+Loading tools\kernel32.lib...
+Loading tools\user32.lib...
+Loading tools\winmm.lib...
+Loading tools\msvcrt_old.lib...
+
+Linking...
+
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](7)!MusBuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](11)!wavehand' overridden to 16 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](13)!freqarr' overridden to 16 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](14)!sampbuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](15)!mixbuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](16)!revbuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](17)!delbuf' overridden to 16 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\RANDOM.OBJ](1)!randdata' overridden to 16 bits
+
+Uncompressed size of code:  1462
+Uncompressed size of data:   858
+
+Output file: music.exe
+Final file size: 1733
+
+time spent: 0m00s
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>tools\crinkler20\crinkler temp\oidos.obj temp\random.obj temp\play_wav.obj /OUT:music_wav.exe /ENTRY:main tools\kernel32.lib tools\user32.lib tools\winmm.lib tools\msvcrt_old.lib @crinkler_options.txt 
+Crinkler 2.0 (Jul 28 2015) (c) 2005-2015 Aske Simon Christensen & Rune Stubbe
+
+Target: music_wav.exe
+Tiny compressor: NO
+Tiny import: NO
+Subsystem type: CONSOLE
+Large address aware: NO
+Compression mode: INSTANT
+Saturate counters: NO
+Hash size: 100 MB
+Hash tries: 20
+Order tries: 0
+Report: NONE
+Transforms: NONE
+Replace DLLs: NONE
+Fallback DLLs: NONE
+Range DLLs: NONE
+Exports: NONE
+
+Loading temp\oidos.obj...
+Loading temp\random.obj...
+Loading temp\play_wav.obj...
+Loading tools\kernel32.lib...
+Loading tools\user32.lib...
+Loading tools\winmm.lib...
+Loading tools\msvcrt_old.lib...
+
+Linking...
+
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](7)!MusBuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](11)!wavehand' overridden to 16 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](13)!freqarr' overridden to 16 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](14)!sampbuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](15)!mixbuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](16)!revbuf' overridden to 24 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\OIDOS.OBJ](17)!delbuf' overridden to 16 bits
+Alignment of section 'h[C:\DEV\4K\LEVIATHAN-2.0\SRC\OIDOS\EASY_EXE\TEMP\RANDOM.OBJ](1)!randdata' overridden to 16 bits
+
+Uncompressed size of code:  1552
+Uncompressed size of data:   944
+
+Output file: music_wav.exe
+Final file size: 1826
+
+time spent: 0m00s
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>pause
+Press any key to continue . . . 
+
+CLINK C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe>REM C:\dev\4k\Leviathan-2.0\src\oidos\easy_exe\temp>lib /out:oidos.lib oidos.obj random.obj 
