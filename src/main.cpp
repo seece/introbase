@@ -33,17 +33,9 @@ const char *fragment_frag = R"END(
 #define SCREEN_Y (720/2)
 uniform float iTime;
 uniform sampler2D img;
-//float t,l,v,f,z,i=0,m=2,n=.3,r=0;
-float t;
 
-/*
-vec3 func(vec2 pos) {
-	float d = length(pos - vec2(1.0) + 0.5*vec2(cos(t), sin(t*2.0)));
-	if (d < 0.1) return vec3(1.0);
-	return vec3(0.0);
-}
-*/
-
+float buildings, buildings2, sea, bust, intro, end;
+const float PI=3.1415926536;
 
 float rand(in vec2 st) {
     return fract(sin(dot(st.xy,
@@ -53,6 +45,12 @@ float rand(in vec2 st) {
 
 void pR(inout vec2 p, float a) {
 	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+float smootherstep(float a, float b, float r) {
+    r = clamp(r, 0.0, 1.0);
+    r = r * r * r * (r * (6.0 * r - 15.0) + 10.0);
+    return mix(a, b, r);
 }
 
 float snoise(in vec2 st) {
@@ -84,63 +82,152 @@ vec3 pMod3(inout vec3 p, vec3 size) {
 	return c;
 }
 
-vec3 field(vec3 p, float t) {
-    p.z += t*2.0;
-    //vec3 col = abs(sin(p));
-    vec3 col = vec3(1.0, 0.5, 0.0);
-    float ofs = pow(snoise(p.xz), 2.0);
-	vec3 cluster = pMod3(p, vec3(1.0));
-    return col*vec3(2e-3)/(length(p) + ofs);
+vec3 space(vec3 p, float t) {
+    vec3 op=p;
+    p.y = abs(p.y - buildings*10.0);
+    p.z += t*0.5 + t*buildings2*0.5;
+    p.z -= pow(0.015*t, 4.0);
+    
+    float side = abs(sin(p.x*0.2)*sin(p.z*0.2));
+    vec3 red = mix(vec3(1.0, 0.7, 0.1), vec3(0.05, 0.2, 0.9), sea);
+    vec3 col = mix(red, vec3(0.1, 0.9, 0.9), side);
+    //float thick = snoise(p.xz*4.0 + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0);
+    float thick = -0.05;
+    float bt = 0.85*buildings;
+    bt += ( 1.0*snoise(p.xz*(0.4))) ;
+    bt += (p.y*0.02 - 0.2*snoise(p.yy*0.2+p.z));
+    bt += cos(p.x*0.5);
+    bt += 0.5*snoise(p.yz*10.0);
+    
+        
+    thick += buildings*bt;
+    
+    thick += (1.0-buildings) * (snoise(p.xz*(2.0) + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0));
+    thick -= 0.0*sea;
+    
+    p.xy += 0.5*sin(p.zx*2.0+vec2(t*.5, t*.2))*sea;
+    
+    float flash = 0.0;//0.5*(1.0+sin(t + 0.2*snoise(p.xx)+0.2*snoise(p.yz)));
+    float ofs = pow(thick*1.0 + sin(p.x+t*0.1)*0.1, 2.0) - 0.1*flash;
+    vec3 p2=p;
+    vec3 cluster = pMod3(p, vec3(0.4));
+    
+    vec3 small = col*vec3(3e-3) / (length(p) + ofs);
+    small += max(0.,-sign(op.y))*vec3(0.004)*(1.0-sea);
+    
+    return small;
 }
+
+vec3 face(vec3 p, float t) {
+    p.x -= 0.2;
+    p.y -= 5.0;
+    p.z -= 2.0;
+    
+    const float H=7.0;
+    float a=0.0;
+    for (float i=0.;i<1.0;i+=1./H) {
+        float angle = (i)*2.*PI + t*0.5;
+        float dist = 0.2;
+        vec3 q = p + 1.0*vec3(dist*cos(angle*1.1), dist*sin(angle*1.0), 0.0);
+        //vec3 q = p + vec3(0.0, 0.0, 0.0);
+        a += 0.8e-2/pow(length(q) * H, 1.0);
+    }
+
+    return vec3(0.0, 0.5, 1.0)*a;
+}
+
+vec3 field(vec3 p, float t) {
+    return mix(face(p,t), space(p, t), intro);
+}
+
 
 vec3 march(vec2 uv, float t) {
 	vec3 c = vec3(1.0, 0.0, 0.0);
     vec3 origin = vec3(uv - vec2(0.5, 0.25), 1.0);
-    origin.y += 0.1;
-    pR(origin.xy, t*0.2);
-    pR(origin.xz, t*0.2);
+    origin.xy*=0.7;
+
+    #define nice(x) smootherstep(0.0, 1.0, max(0.0, min(1.0, x)))
+    
+    float orbit = 1.0 - nice((t-40.0)*0.025);
+    sea = nice((t-100.0)*0.05);
+    buildings2 = 1.0-orbit; // TODO simplify?
+    buildings = buildings2-sea;
+	
+    float back = nice((t-155.0)*0.1);
+    end = nice((t-170.0)*0.1);
+    sea -= back; //nice((t-150.0)*0.1);
+    intro = nice((t-3.0)*0.05);
+    intro -= back;
+    
+    bust = nice((t-30.0)*0.2);
+    
+    //intro
+    float ryz = orbit*0.4 - 0.2 + buildings*0.15 + 0.5;
+    float rxz = orbit*0.7 + sin(t*0.1)*0.1*sea + sea*0.1;
+    
+    ryz += buildings*(sin(t*0.1)*0.2-0.1);
+   
+    rxz += buildings*0.8;
+    rxz += cos(t*0.1)*0.3*sea + 0.2*sea;
+    ryz -= 0.4 + 0.4*sea + cos(t*0.1)*0.4*sea;
+    float rxy = 0.5*sea;
+    
+    pR(origin.xy, rxy * intro);
+    pR(origin.yz, ryz * intro);
+    pR(origin.xz, rxz * intro);
+    
     vec3 dir = normalize(origin);
+    
+    origin.x += 0.25;
+    origin.y += 5.0 - sea*7.0;
+    
     vec3 p = origin;
-    //p.xy += 0.4*vec2(cos(t), sin(t));
     vec3 accum = vec3(0.);
-    for (int i=0;i<50;i++) {
+    for (int i=0;i<80;i++) {
         vec3 d = field(p, t);
         accum += d;
             
-        
-    	p += dir * 1e-3 * 1.0/length(d);
+    	p += dir * 1.0e-3 * max(0.005, 1.0/length(d));
     }
     
+    accum *= mix(max(0., 1.0 - 0.1*sqrt(length(p-origin))), 1.0, buildings);
+    accum /= 1.0+buildings*0.4;
     float boost = pow(max(accum.x, max(accum.y, accum.z)), 2.0);
     return accum + vec3(boost);
 }
 
-void main()
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    float t = iTime;
+	float t = iTime;
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
     vec2 p = vec2(uv.x, uv.y * (float(SCREEN_Y)/SCREEN_X));
 
-    vec2 ncoord = p + vec2(sin(t*199.), sin(t*238.));
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
     
-    vec3 new = pow(march(p, t), vec3(2.0));
+    vec2 movement = 1e-4*vec2(cos(t*.2), sin(t*.2));
+    vec2 centr = vec2(0.5) + movement;
+      
+    vec2 zoomed_uv = (uv - centr)*1.0+vec2(0.5);
+	//pR(zoomed_uv, 0.04);
+    
+    vec3 old = texture(img, zoomed_uv ).rgb;
+    old = floor(old*255.)/255.0; // DEBUG simulate quantization
+    old += 1.0/255. * rand(uv+vec2(t)) - 0.1/255.0;
+    vec2 ncoord = p + vec2(sin(iTime*199.), sin(iTime*238.));
+	float noise = snoise(8e2*ncoord);
+    
+    vec3 stars = pow(march(p, t), vec3(2.0));
+    vec3 back = vec3(1.0,0.98,0.99)*old;
+    float feedback = 0.98 - buildings * 0.03 - 0.5;
+    
+    vec3 new = feedback*back + 0.1*stars + 0.0*vec3(noise-0.5);
+    new *= 1.0-end;
     new = clamp(new, vec3(0.0), vec3(1.0));
-	new += texture(img, uv * 0.5).rgb*0.90 - 1.0/255.0;
     
-    // Output to screen
-    gl_FragColor = vec4(new,1.0);
+    gl_FragColor = vec4(new*2.0,1.0);
 }
-
-/*
-void main()
-{
-	t=ti;
-	vec2 fc = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
-	vec3 c = func(fc) + texture(img, fc * 0.5).rgb*0.90 - 1.0/255.0;
-	gl_FragColor=vec4(c, 1.0);
-	};	
-*/
 )END";
 //#include "shaders/fragment.inl"
 #if TWO_PASS
@@ -187,7 +274,37 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 	SetPixelFormat(hDC, ChoosePixelFormat(hDC, &pfd), &pfd);
 	wglMakeCurrent(hDC, wglCreateContext(hDC));
 	
+	#if 0
 	PID_QUALIFIER int pid = ((PFNGLCREATESHADERPROGRAMVPROC)wglGetProcAddress("glCreateShaderProgramv"))(GL_FRAGMENT_SHADER, 1, &fragment_frag);
+	#else
+	#define glCreateShader ((PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader"))
+	#define glShaderSource ((PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource"))
+	#define glCompileShader ((PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader"))
+	#define glCreateProgram ((PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram"))
+	#define glAttachShader ((PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader"))
+	#define glLinkProgram ((PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram"))
+	#define glDetachShader ((PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader"))
+	#define glDeleteShader ((PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader"))
+	#define glGetShaderiv ((PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv"))
+	GLuint shader = glCreateShader(GL_FRAGMENT_SHADER); CHECK_ERRORS();
+	PID_QUALIFIER int pid = glCreateProgram(); CHECK_ERRORS();
+	int lens = 1;
+	glShaderSource(shader, NULL, &fragment_frag, &lens); CHECK_ERRORS();
+	glCompileShader(shader); CHECK_ERRORS();
+	GLint compiled = GL_FALSE;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled); CHECK_ERRORS();
+	char info[2048];
+	((PFNGLGETSHADERINFOLOGPROC) wglGetProcAddress("glGetShaderInfoLog"))(shader, 2047, NULL, (char*)info);
+
+	glAttachShader(pid, shader); CHECK_ERRORS();
+	glLinkProgram(pid);  CHECK_ERRORS();
+	glDetachShader(pid, shader); CHECK_ERRORS();
+	GLint linked = -1;
+	((PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv"))(pid, GL_LINK_STATUS, &linked);
+	char info2[2048];
+	((PFNGLGETPROGRAMINFOLOGPROC) wglGetProcAddress("glGetProgramInfoLog"))(pid, 2047, NULL, (char*)info2);
+	#endif
+
 	#if TWO_PASS
 		PID_QUALIFIER int pi2 = ((PFNGLCREATESHADERPROGRAMVPROC)wglGetProcAddress("glCreateShaderProgramv"))(GL_FRAGMENT_SHADER, 1, &post_frag);
 	#endif
@@ -238,6 +355,14 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			MSG msg;
 			PeekMessage(&msg, 0, 0, 0, PM_REMOVE);
 		#endif
+
+			{
+				GLint result = -1;
+				((PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv"))(pid, GL_ATTACHED_SHADERS, &result);
+				char info[2048];
+				((PFNGLGETPROGRAMINFOLOGPROC) wglGetProcAddress("glGetProgramInfoLog"))(pid, 2047, NULL, (char*)info);
+				info[2047] = '\0';
+			}
 
 		// render with the primary shader
 		((PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram"))(pid);
