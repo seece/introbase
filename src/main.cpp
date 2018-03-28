@@ -28,11 +28,11 @@
 #include "glext.h"
 #pragma data_seg(".shader") 
 const char *fragment_frag = R"END(
-#version 430
+#version 130
 #define SCREEN_X (1280/2)
 #define SCREEN_Y (720/2)
-layout(location=0)uniform float ti;
-layout(location=1)uniform sampler2D img;
+uniform float iTime;
+uniform sampler2D img;
 //float t,l,v,f,z,i=0,m=2,n=.3,r=0;
 float t;
 
@@ -117,7 +117,7 @@ vec3 march(vec2 uv, float t) {
 
 void main()
 {
-    float t = ti;
+    float t = iTime;
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
     vec2 p = vec2(uv.x, uv.y * (float(SCREEN_Y)/SCREEN_X));
@@ -135,7 +135,7 @@ void main()
 /*
 void main()
 {
-	t=ti/44100.;
+	t=ti;
 	vec2 fc = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
 	vec3 c = func(fc) + texture(img, fc * 0.5).rgb*0.90 - 1.0/255.0;
 	gl_FragColor=vec4(c, 1.0);
@@ -208,10 +208,11 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 			HANDLE result = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)threadDummy, 0, 0, 0);
 
 			//Oidos_GenerateMusic();
-			Sleep(30000);
+			//Sleep(30000);
 
-			Oidos_StartMusic();
-			sample after = Oidos_MusicBuffer[20*44100];
+			//Oidos_StartMusic();
+
+			//sample after = Oidos_MusicBuffer[20*44100];
 			// FILE* fp = fopen("file.raw", "rw");
 			// fwrite(Oidos_MusicBuffer, sizeof(sample), 44100 * 30, fp);
 			// fclose(fp);
@@ -246,7 +247,9 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		((PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture"))(GL_TEXTURE0);
 		CHECK_ERRORS();
-		((PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i"))(1, 0);
+
+		const GLuint imgLoc = ((PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation"))(pid, "img");
+		((PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i"))(imgLoc, 0);
 		CHECK_ERRORS();
 		// copy GL_BACK -> GL_TEXTURE_2D
 		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 0, 0, XRES, YRES, 0);
@@ -263,7 +266,9 @@ int CALLBACK WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 					#error not implemented
 					//glColor3ui(MMTime.u.sample, 0, 0);
 				#else
-					((PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f"))(0, timeInTicks/Oidos_TicksPerSecond);
+					const GLuint timeLoc = 
+						((PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation"))(pid, "iTime");
+					((PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f"))(timeLoc, timeInTicks/Oidos_TicksPerSecond);
 				#endif
 			#endif
 		#else
