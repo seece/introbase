@@ -11,8 +11,8 @@
 #include <GL/gl.h>
 
 // global resolution
-#define XRES 1280
-#define YRES 720
+#define XRES (1280/2)
+#define YRES (720/2)
 
 #pragma data_seg(".pixelfmt")
 static const PIXELFORMATDESCRIPTOR pfd = {

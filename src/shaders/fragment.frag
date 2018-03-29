@@ -1,257 +1,217 @@
 #version 130
-uniform int m;
-out vec4 o;
-float PI = 3.1416;
-float t = m/float(44100);
-float rep = 2.0;
-float dist = 18.0;
-float scene = 0;
-float brg = 1.48;
-float ap1 = 23.0;
-float ap2 = 35.0;
-float hash(float c){return fract(sin(dot(c, 12.9898)) * 43758.5453);}
-mat3 rx(float a){return mat3(1.0,0.0,0.0,0.0,cos(a),-sin(a),0.0,sin(a),cos(a));}
-mat3 ry(float a){return mat3(cos(a),0.0,sin(a),0.0,1.0,0.0,-sin(a),0.0,cos(a));}
-mat3 rz(float a){return mat3(cos(a),-sin(a),0.0,sin(a),cos(a),0.0,0.0,0.0,1.0);}
-float box(vec3 p, vec3 b)
-{
-	return max(max(abs(p.x)-b.x,abs(p.y)-b.y),abs(p.z)-b.z);
+#define SCREEN_X (1280/2)
+#define SCREEN_Y (720/2)
+uniform float iTime;
+uniform sampler2D img;
+
+float buildings, buildings2, sea, seabrite, bust, intro, end, struckfinal;
+const float PI=3.1415926536;
+
+float rand(in vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))*
+        43758.5453123);
 }
-float modp(inout vec2 p, float rep) {
-	float angle = 2*PI/rep;
-	float a = atan(p.y, p.x) + angle/2;
-	float c = floor(a/angle);
-	a = mod(a,angle) - angle/2.;
-	p = vec2(cos(a), sin(a))*length(p);
-	if (abs(c) >= (rep/2)) c = abs(c);
+
+void pR(inout vec2 p, float a) {
+	p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+float smootherstep(float a, float b, float r) {
+    r = clamp(r, 0.0, 1.0);
+    return mix(a, b, r * r * r * (r * (6.0 * r - 15.0) + 10.0));
+}
+
+float snoise(in vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = rand(i);
+    float b = rand(i + vec2(1.0, 0.0));
+    float c = rand(i + vec2(0.0, 1.0));
+    float d = rand(i + vec2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    vec2 u = f*f*(3.0-2.0*f);
+    // u = smoothstep(0.,1.,f);
+
+    // Mix 4 coorners porcentages
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+// Repeat in three dimensions
+vec3 pMod3(inout vec3 p, vec3 size) {
+	vec3 c = floor((p + size*0.5)/size);
+	p = mod(p + size*0.5, size) - size*0.5;
 	return c;
 }
-vec2 mod2(inout vec2 p, vec2 size) {
-	vec2 c = floor((p + size*0.5)/size);
-	p = mod(p + size*0.5,size) - size*0.5;
-	return c;
+
+vec3 space(vec3 p, float t) {
+    vec3 op=p;
+    p.y = abs(p.y - buildings*10.0);
+    p.z += t*0.5 + t*buildings2*0.5;
+    p.z -= pow(0.015*t, 4.0);
+    //p.x += sin(t*0.05)*buildings2*16.0;
+    
+    //p.y = abs(p.y-10.0);
+    //vec3 col = abs(sin(p));
+    //vec3 col = vec3(1.0, 0.5, 0.0);
+    float side = abs(sin(p.x*0.2)*sin(p.z*0.2));
+    vec3 red = mix(vec3(1.0, 0.7, 0.1), vec3(0.05, 0.2, 0.9), sea);
+    vec3 col = mix(red, vec3(0.1, 0.9, 0.9), side);
+    //float thick = snoise(p.xz*4.0 + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0);
+    float thick = -0.05;
+    float bt = 0.85*buildings;
+    bt += ( 1.0*snoise(p.xz*(0.4))) ;
+    bt += (p.y*0.02 - 0.2*snoise(p.yy*0.2+p.z));
+    bt += cos(p.x*0.5);
+    bt += 0.5*snoise(p.yz*10.0);
+    
+        
+    thick += buildings*bt;
+    
+    thick += (1.0-buildings) * (snoise(p.xz*(2.0) + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0));
+    thick += 0.2*sea - 0.2*seabrite;
+    //thick += sin(p.y/(1.0+p.y));
+    
+    //p.x += (sin(p.z+t*.5))*.5 * sea;
+    //p.y += (sin(p.x+t*.4))*.5 * sea;
+    p.xy += 0.5*sin(p.zx*2.0+vec2(t*.5, t*.2))*sea;
+    
+    float flash = 0.0;//0.5*(1.0+sin(t + 0.2*snoise(p.xx)+0.2*snoise(p.yz)));
+    float ofs = pow(thick*1.0 + sin(p.x+t*0.1)*0.1, 2.0) - 0.1*flash;
+    vec3 p2=p;
+	//vec3 cluster = pMod3(p, vec3(0.5 - 0.3*buildings));
+    vec3 cluster = pMod3(p, vec3(0.4));
+    
+    //vec3 cluster2 = pMod3(p2, vec3(8.0));
+    
+    vec3 small = col*vec3(3e-3) / (length(p) + ofs);
+    //vec3 big = col*vec3(pow(2e-2 / ((length(p2) + ofs)), 1.1));
+    //small += max(0.,-sign(op.y))*vec3(0.004)*vec3(1.0, 0.3, 0.1);
+    small += max(0.,-sign(op.y))*vec3(0.004)*(1.0-sea);
+    //small *= 1.0 + max(0., sign(p.y));
+    
+    return small;
 }
-float sp(vec3 p, float r)
-{
-	return length(p)-r;
+
+vec3 face(vec3 p, float t) {
+    p.x -= 0.2 ;
+    p.y -= 5.0;
+    p.z -= 2.0 - struckfinal*0.6 ;
+    
+    const float H=7.0;
+    float a=0.0;
+    for (float i=0.;i<1.0;i+=1./H) {
+        float angle = (i)*2.*PI + t*0.5;
+        float dist = 0.2;
+        vec3 q = p + 1.0*vec3(dist*cos(angle*1.1), dist*sin(angle*1.0), 0.0);
+        //vec3 q = p + vec3(0.0, 0.0, 0.0);
+        a += 0.8e-2/pow(length(q) * H, 1.0);
+    }
+
+    return vec3(0.0, 0.5, 1.0)*a;
 }
-float caps(vec3 p, float r, float c){
-	return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
+
+vec3 field(vec3 p, float t) {
+    //return mix(max(vec3(0.0), space(p, t)), face(p, t), bust);
+    //return space(p, t) + face(p, t) * bust * 0.0;
+    return mix(face(p,t), space(p, t), intro);
 }
-float map(vec3 p)
-{
-	if( scene < 1 ){
-		float d = (p.y);
-		vec2 r = mod2(p.zx, vec2(dist));
-		modp(p.zx, rep);
-		d = min(d, box((p-vec3(0,1,9)), vec3(9,9,0.2)) );
-		d = min(d, box((p-vec3(-6,1,0)), vec3(0.2,9.,9)) );
-		d = min(d, box((p-vec3(6,1,-9)), vec3(0.2,9.,9)) );
-		d = max(d, -box((p-vec3(0,4,0)), vec3(1.5,4.,10)));
-		return d;
-	}
-	else
-	{
-		p += vec3(-70,0,0);
-		vec3 q = p;
-		modp(p.xz, 4.0);
-		vec3 o = p;
-		mod2(o.yx, vec2(6,9));
-		vec3 r = p;
-		float d = caps(p-vec3(rep,-3,0), 44.0, dist);
-		mod2(r.xz, vec2(12.7));
-		float d2 = box((o-vec3(0.,1,0)), vec3(9,1.5,ap1));
-		d2 = max(d2, p.y-28.0);
-		d = max(d, -d2);
-		d = min(d, box((r-vec3(0.,8,0)), vec3(.6,9,.6)));
-		d = max(d, -caps(p-vec3(rep,-3,0), 24.0, 15.0));
-		float d6 = sp(p-vec3(rep,40,0), 30.0 );
-		d = max(d, -d6);
-		float d3 = caps(q-vec3(0,-3,0), 55.0, 0.0);
-		d3 = max(d3, -caps(q-vec3(0,-3,0), ap2, 15.0));
-		d3 = max(d3, -sp(q-vec3(0,40,0), 30.0 ));
-		d = max(d, d3);
-		return min(d, p.y);
-	}
+
+
+vec3 march(vec2 uv, float t) {
+	vec3 c = vec3(1.0, 0.0, 0.0);
+    vec3 origin = vec3(uv - vec2(0.5, 0.25), 1.0);
+    origin.xy*=0.7;
+
+    
+    #define nice(x) smootherstep(0.0, 1.0, max(0.0, min(1.0, x)))
+    
+    float orbit = 1.0 - nice((t-50.0)*0.04);
+    sea = nice((t-100.0)*0.05);
+	seabrite = nice((t-113.0)*0.3);
+    buildings2 = 1.0-orbit; // TODO simplify?
+    buildings = buildings2-sea;
+	
+    float back = nice((t-142.0)*0.08);
+    end = nice((t-160.0)*0.1);
+    sea -= back; //nice((t-150.0)*0.1);
+    intro = nice((t-4.0)*0.1);
+    intro -= back;
+	
+	struckfinal = nice((t-155.0)*0.2);
+    
+    bust = nice((t-30.0)*0.2);
+    
+    //intro
+    float ryz = orbit*0.4 - 0.2 + buildings*0.15 + 0.5;
+    float rxz = orbit*0.7 + sin(t*0.1)*0.1*sea + sea*0.1;
+    
+    ryz += buildings*(sin(t*0.1)*0.2-0.1);
+   
+    rxz += buildings*0.8;
+    rxz += cos(t*0.1)*0.3*sea + 0.2*sea;
+    ryz -= 0.4 + 0.4*sea + cos(t*0.1)*0.4*sea;
+    float rxy = 0.5*sea;
+    
+    pR(origin.xy, rxy * intro);
+    pR(origin.yz, ryz * intro);
+    pR(origin.xz, rxz * intro);
+    
+    vec3 dir = normalize(origin);
+    
+    origin.x += 0.25;
+    origin.y += 5.0 - sea*7.0;
+    
+    vec3 p = origin;
+    vec3 accum = vec3(0.);
+    for (int i=0;i<80;i++) {
+        vec3 d = field(p, t);
+        accum += d;
+            
+    	p += dir * 1.0e-3 * max(0.005, 1.0/length(d));
+    }
+    
+    accum *= mix(max(0., 1.0 - 0.1*sqrt(length(p-origin))), 1.0, buildings);
+    accum /= 1.0+buildings*0.4;
+    float boost = pow(max(accum.x, max(accum.y, accum.z)), 2.0);
+    return accum + vec3(boost);
 }
-vec3 rhs(vec3 dir, float i)
-{
-	vec2 rnd = vec2(hash(i+1.), hash(i+2.));
-	float s = rnd.x*PI*2.;
-	float t = rnd.y*2.-1.;
-	vec3 v = vec3(sin(s), cos(s), t) / sqrt(1.0 + t * t);
-	return v * sign(dot(v, dir));
-}
-float ao( vec3 p, vec3 n, float maxDist, float falloff)
-{
-	float ao = 0.0;
-	for( int i=0; i<10; i++ )
-	{
-		float l = hash(float(i))*maxDist;
-		vec3 rd = normalize(n+rhs(n, l )*0.95)*l;
-		ao += (l - map( p + rd )) / pow(1.+l, falloff);
-	}
-	return clamp(1.-ao*0.1,0.0,999.0);
-}
-vec3 shade( vec3 p, vec3 n, vec3 org, vec3 dir, vec2 v )
-{
-	return vec3(0.8)*sqrt(mix(ao(p,n, 8., 0.97), ao(p,n, 2., 0.9), 0.4));
-}
-vec3 normal( vec3 p )
-{
-	vec3 eps = vec3(0.001, 0.0, 0.0);
-	return normalize( vec3(
-		map(p+eps.xyy)-map(p-eps.xyy),
-		map(p+eps.yxy)-map(p-eps.yxy),
-		map(p+eps.yyx)-map(p-eps.yyx)
-	));
-}
-vec3 mr( vec3 ro, vec3 rd, vec2 nfplane, out float f)
-{
-	vec3 p = ro+rd*nfplane.x;
-	float t = 0.;
-	for(int i=0; i<40; i++)
-	{
-		float d = map(p);
-		t += d;
-		p += rd*d;
-		if( d < 0.01 || t > nfplane.y )
-			break;
-	}
-	f = 0.04*sqrt(nfplane.y/max(9.0, distance(ro, p)));
-	return p;
-}
-vec3 rm( vec3 ro, vec3 rd, vec2 nfplane )
-{
-	vec3 p = ro+rd*nfplane.x;
-	float t = 0.;
-	for(int i=0; i<80; i++)
-	{
-		float d = map(p);
-		t += d;
-		p += rd*d;
-		if( d < 0.01 || t > nfplane.y )
-			break;   
-	}
-	return p;
-}
-vec3 cc(vec3 c)
-{
-	return 0.08+0.94*pow(-0.5+1.7*pow(c,vec3(1.6)), vec3(0.6));
-}
+
 void main()
 {
-	vec2 res = vec2(1280,720);
-	vec2 q = gl_FragCoord.xy/res.xy;
-	vec2 v = -1.0+2.0*q;
-	v.x *= res.x/res.y;
-	vec3 ro = vec3(0);
-	vec3 rd = vec3(0);
-	if(t < 4){
-		o = vec4(0.035*hash(length(q)*t));
-		return;
-	} else if(t < 9.0) {
-		ro = vec3( 90.0+t,90.0,-130.0+t );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-		rep = 6.0;
-		dist = 13.9;
-	} else if(t < 16){
-		ro = vec3( 90.0,90.0,-130.0+t );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-		rep = 8.0;
-		dist = 16.0;
-	} else if(t < 26){
-		ro = vec3( 90.0+t,90.0,-130.0+t*0.1 );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-	}
-	else if(t < 32){
-		ro = vec3( 90.0+t,90.0,-130.0 );
-		rd = normalize( vec3(v.x, v.y, 5.0))*rx(PI/2.);
-	}
-	else if(t < 35){
-		ro = vec3( 90.0+t,90.0,-130.0+t );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-		rep = 6.0;
-		dist = 11.9;
-	}
-	else if(t < 44){
-		ro = vec3( 90.0-t*0.1,90.0,-130.0+t );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-		rep = 6.0;
-		brg = 2.48-smoothstep(33,41,t);
-	}
-	else if(t < 49.5){
-		ro = vec3( 90.0+t*.5,40.0,-130.0+t*2 );
-		rd = normalize( vec3(v.x, v.y, 4.0))*rx(.5)*ry(-.2);
-		rep = 6.0;
-		dist = 21.0;
-		brg = 1.6;
-	}
-	else if(t < 58){
-		ro = vec3( 90.0+t,90.0,-130.0+t*0.1 );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-		rep = 8.0;
-	}
-	else if(t < 69){
-		ro = vec3(t*.5,90.0,-t*.5 );
-		rd = normalize( vec3(v.x, v.y, 5.0))*rx(PI/2.)*ry(t*.01);
-		rep = 6.0;
-		dist = 16.0 - 3.0*smoothstep(21,30,t*.4);
-	}
-	else if(t < 75){
-		float tt = t-69;
-		ro = vec3( 0,290+tt*2,-tt*3);
-		rd = normalize( vec3(v.x, v.y, 8.0) )*ry(1.2)*rx(1.5-0.01*tt)*rz(-1);
-		rep = 0.0;
-		dist = -26+43*smoothstep(70,82,t);
-		scene = 1;
-		brg = 1.4;
-	}
-	else if(t < 81){
-		float tt = t-75;
-		ro = vec3( 90.0-tt*3,210-tt,160-tt);
-		rd = normalize( vec3(v.x, v.y, 5.0) )*ry(3.1-(t-73)*0.01)*rx(-.9);
-		rep = 0.0;
-		dist = -26+43*smoothstep(70,82,t);
-		scene = 1;
-	}
-	else if(t < 98){
-		float tt = t-80;
-		ro = vec3( t,290-t,240-t);
-		rd = normalize( vec3(v.x, v.y, 5.0) )*ry(3.1+tt*0.003)*rx(-.9);
-		rep = 60.0;
-		dist = 17.0;
-		ap2 = 58-19*smoothstep(75,95,t)-12*smoothstep(85,96,t);
-		ap1 = 9+19*smoothstep(80,95,t);
-		scene = 1;
-	}
-	else if(t < 105){
-		ro = vec3( 90.0+t,90.0,-130.0+t );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-		rep = 6.0;
-		dist = 11.9;
-	}
-	else if(t < 190){
-		ro = vec3( 90.0+t,90.0,-130.0+t*0.1 );
-		rd = normalize( vec3(v.x, v.y, 8.0))*rx(1.)*ry(.5);
-		brg = 1.48+1.5*smoothstep(111,140,t);
-	}
-	vec3 p = rm(ro, rd, vec2(1., 545.) );
-	vec3 n = normal(p.xyz);
-	vec3 col = shade(p, n, ro, rd, q);
-	vec3 rp = vec3(0);
-	float tile = 1.0;//ceil(sin(p.x*0.9)*cos(p.z*0.05));
-	if(p.y < 26.0){
-		// uhh, stuff...
-		//normalize(n+(1.0-tile)*0.1*vec3(hash(dot(p,p)),hash(length(p)),hash(dot(p,-p)) ))
-		float f;
-		rp = mr(p, reflect(rd, n), vec2(0.1, 300.), f );
-		vec3 rn = normal(rp.xyz);
-		col += shade(rp, rn, ro, rd, q)*f; 
-		col *= 0.8;
-	} else {
-		col = mix(col,0.5+0.5*vec3(col*dot(n, normalize(p-vec3(99,-99,0)))), 0.3);
-	}
-	col = pow(col*brg/sqrt(2.+dot(v*0.3,v*0.3)), vec3(1./2.2));
-	o = vec4(cc(col-0.035*hash(length(q)*t)), p.y<0.1?tile*distance(p, rp)/10.0:0.0 );
+	float t = iTime;
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = gl_FragCoord.xy/vec2(SCREEN_X, SCREEN_Y);
+    vec2 p = vec2(uv.x, uv.y * (float(SCREEN_Y)/SCREEN_X));
+
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
+    
+    vec2 movement = 1e-4*vec2(cos(t*.2), sin(t*.2));
+    vec2 centr = vec2(0.5) + movement;
+      
+    
+    vec3 old = texture(img, uv ).rgb;
+    old += 1.0/255. * rand(uv+vec2(t)) - 0.1/255.0;
+    vec2 ncoord = p + vec2(sin(iTime*199.), sin(iTime*238.));
+	float noise = snoise(8e2*ncoord);
+    
+    vec3 stars = pow(march(p, t), vec3(2.0));
+    vec3 back = vec3(1.0,0.98,0.99)*old;
+    float feedback = 0.96 - buildings * 0.2 - 0.5 + struckfinal*0.05;
+    
+    vec3 new = feedback*back + (0.2 + buildings*0.3)*stars + 0.0*vec3(noise-0.5);
+	//vec3 new = back*0.4 + 0.05*stars;
+    //new *= 1.0-end;
+    new = clamp(new, vec3(0.0), vec3(1.0));
+    //new = new*0.001 + vec3(uv.x, uv.y, 0.0);
+    gl_FragColor = vec4(new*2.0,1.0);
+    //gl_FragColor = vec4(uv.x, uv.y, 0.0, 1.0);
 }

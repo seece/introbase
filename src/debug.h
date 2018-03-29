@@ -105,22 +105,22 @@ static bool shaderDebug(const char* shader, bool kill_on_failure = true)
 		return shaderString;
 	}
 
-	void refreshShaders(int& pid, int& pi2)
+	void refreshShaders(int& pid)
 	{
 		if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState('S'))
 		{
 			// make sure the file has finished writing to disk
 			if(timeGetTime() - lastLoad > 200) {
 				Sleep(100);
-				char* newSource = updateShader("../src/shaders/fragment.frag");
+				char* newSource = updateShader("src/shaders/fragment.frag");
 				shaderDebug(newSource, false);
 				pid = ((PFNGLCREATESHADERPROGRAMVPROC)wglGetProcAddress("glCreateShaderProgramv"))(GL_FRAGMENT_SHADER, 1, &newSource);
 				free(newSource);
 
-				newSource = updateShader("../src/shaders/post.frag");
-				shaderDebug(newSource, false);
-				pi2 = ((PFNGLCREATESHADERPROGRAMVPROC)wglGetProcAddress("glCreateShaderProgramv"))(GL_FRAGMENT_SHADER, 1, &newSource);
-				free(newSource);
+				// newSource = updateShader("../src/shaders/post.frag");
+				// shaderDebug(newSource, false);
+				// pi2 = ((PFNGLCREATESHADERPROGRAMVPROC)wglGetProcAddress("glCreateShaderProgramv"))(GL_FRAGMENT_SHADER, 1, &newSource);
+				// free(newSource);
 			}
 			lastLoad = timeGetTime()-start;
 		}
