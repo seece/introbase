@@ -114,7 +114,7 @@ vec3 face(vec3 p, float t) {
     for (float i=0.;i<1.0;i+=1./H) {
         float angle = (i)*2.*PI + (t - end)*0.5;
 		//float angle2 =(i)*2.*PI + PI*0.5;
-        float dist = 0.24 + sin(t*.5)*(0.05 + struckfinal*0.04) - 0.32*end;
+        float dist = 0.24 + sin(t*.5)*(0.05 + struckfinal*0.04) - 0.295*end;
         vec3 q = p + 1.0*vec3(
 			dist*cos(angle*1.0) + 0.0,
 			dist*sin(angle*1.0) ,
@@ -150,14 +150,14 @@ vec3 march(vec2 uv, float t) {
 	surface = nice((t-140.0)*0.1);
 	
     //float back = nice((t-142.0)*0.08);
-    float back = nice((t-160.0)*0.15); //147
-    end = nice((t-175.0)*0.2);
+    float back = nice((t-159.0)*0.1); //147
+    end = nice((t-185.0)*0.2);
     sea -= back; //nice((t-150.0)*0.1);
     intro = nice((t-8.0)*0.1);
     intro -= back;
 	surface -= back*0.9;
 	
-	struckfinal = nice((t-159.0)*0.2);
+	struckfinal = nice((t-175.0)*0.15);
     
     bust = nice((t-30.0)*0.2);
     
