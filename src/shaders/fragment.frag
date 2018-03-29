@@ -4,7 +4,7 @@
 uniform float iTime;
 uniform sampler2D img;
 
-float buildings, buildings2, sea, seabrite, bust, intro, end, struckfinal;
+float buildings, buildings2, sea, seabrite, bust, intro, end, struckfinal, startmove;
 const float PI=3.1415926536;
 
 float rand(in vec2 st) {
@@ -55,7 +55,7 @@ vec3 space(vec3 p, float t) {
     vec3 op=p;
     p.y = abs(p.y - buildings*10.0);
     p.z += t*0.5 + t*buildings2*0.5;
-    p.z -= pow(0.015*t, 4.0);
+    p.z -= pow(0.015*t, 4.0) + startmove*10.0;
     //p.x += sin(t*0.05)*buildings2*16.0;
     
     //p.y = abs(p.y-10.0);
@@ -76,7 +76,8 @@ vec3 space(vec3 p, float t) {
     thick += buildings*bt;
     
     thick += (1.0-buildings) * (snoise(p.xz*(2.0) + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0));
-    thick += 0.2*sea - 0.2*seabrite;
+    thick += 0.3*sea - 0.3*seabrite;
+	thick += 0.3*sign(-op.y+4.9)*struckfinal;
     //thick += sin(p.y/(1.0+p.y));
     
     //p.x += (sin(p.z+t*.5))*.5 * sea;
@@ -101,16 +102,20 @@ vec3 space(vec3 p, float t) {
 }
 
 vec3 face(vec3 p, float t) {
-    p.x -= 0.2 ;
-    p.y -= 5.0;
-    p.z -= 2.0 - struckfinal*0.6 ;
+    p.x -= 0.25 ;
+    p.y -= 5.05;
+    p.z -= 2.0;// - struckfinal*0.6 ;
     
     const float H=7.0;
     float a=0.0;
     for (float i=0.;i<1.0;i+=1./H) {
-        float angle = (i)*2.*PI + t*0.5;
-        float dist = 0.2;
-        vec3 q = p + 1.0*vec3(dist*cos(angle*1.1), dist*sin(angle*1.0), 0.0);
+        float angle = (i)*2.*PI + (t - end)*0.5;
+		//float angle2 =(i)*2.*PI + PI*0.5;
+        float dist = 0.24 + cos(t*.5)*(0.05 + struckfinal*0.04) - 0.27*end;
+        vec3 q = p + 1.0*vec3(
+			dist*cos(angle*1.0) + 0.0,
+			dist*sin(angle*1.0) ,
+			0.0					);
         //vec3 q = p + vec3(0.0, 0.0, 0.0);
         a += 0.8e-2/pow(length(q) * H, 1.0);
     }
@@ -121,7 +126,7 @@ vec3 face(vec3 p, float t) {
 vec3 field(vec3 p, float t) {
     //return mix(max(vec3(0.0), space(p, t)), face(p, t), bust);
     //return space(p, t) + face(p, t) * bust * 0.0;
-    return mix(face(p,t), space(p, t), intro);
+    return mix(face(p,t), space(p, t), intro+struckfinal*0.1);
 }
 
 
@@ -138,14 +143,15 @@ vec3 march(vec2 uv, float t) {
 	seabrite = nice((t-113.0)*0.3);
     buildings2 = 1.0-orbit; // TODO simplify?
     buildings = buildings2-sea;
+	startmove = nice((t-5.0)*0.1);
 	
     float back = nice((t-142.0)*0.08);
-    end = nice((t-160.0)*0.1);
+    end = nice((t-169.0)*0.2);
     sea -= back; //nice((t-150.0)*0.1);
     intro = nice((t-4.0)*0.1);
     intro -= back;
 	
-	struckfinal = nice((t-155.0)*0.2);
+	struckfinal = nice((t-159.0)*0.2);
     
     bust = nice((t-30.0)*0.2);
     
@@ -196,7 +202,7 @@ void main()
     
     vec2 movement = 1e-4*vec2(cos(t*.2), sin(t*.2));
     vec2 centr = vec2(0.5) + movement;
-      
+
     
     vec3 old = texture(img, uv ).rgb;
     old += 1.0/255. * rand(uv+vec2(t)) - 0.1/255.0;
@@ -204,12 +210,12 @@ void main()
 	float noise = snoise(8e2*ncoord);
     
     vec3 stars = pow(march(p, t), vec3(2.0));
-    vec3 back = vec3(1.0,0.98,0.99)*old;
-    float feedback = 0.96 - buildings * 0.2 - 0.5 + struckfinal*0.05;
+    vec3 back = mix(vec3(1.0,0.98,0.99), vec3(0.99, 0.95, 0.95), struckfinal)*old;
+    float feedback = 0.96 - buildings * 0.2 - 0.5 + struckfinal*0.04;
     
     vec3 new = feedback*back + (0.2 + buildings*0.3)*stars + 0.0*vec3(noise-0.5);
 	//vec3 new = back*0.4 + 0.05*stars;
-    //new *= 1.0-end;
+    new *= 1.0-end;
     new = clamp(new, vec3(0.0), vec3(1.0));
     //new = new*0.001 + vec3(uv.x, uv.y, 0.0);
     gl_FragColor = vec4(new*2.0,1.0);
