@@ -55,7 +55,7 @@ vec3 space(vec3 p, float t) {
     vec3 op=p;
     p.y = abs(p.y - buildings*10.0);
     p.z += t*0.5 + t*buildings2*0.5;
-    p.z -= pow(0.015*t, 4.0) + startmove*10.0;
+    p.z -= pow(0.015*t, 4.0) + startmove*6.0;
     //p.x += sin(t*0.05)*buildings2*16.0;
     
     //p.y = abs(p.y-10.0);
@@ -65,8 +65,8 @@ vec3 space(vec3 p, float t) {
     vec3 red = mix(vec3(1.0, 0.7, 0.1), vec3(0.05, 0.2, 0.9), sea);
     vec3 col = mix(red, vec3(0.1, 0.9, 0.9), side);
     //float thick = snoise(p.xz*4.0 + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0);
-    float thick = -0.05;
-    float bt = 0.85*buildings;
+    float thick = -0.00;
+    float bt = 0.82*buildings;
     bt += ( 1.0*snoise(p.xz*(0.4))) ;
     bt += (p.y*0.02 - 0.2*snoise(p.yy*0.2+p.z));
     bt += cos(p.x*0.5);
@@ -143,12 +143,12 @@ vec3 march(vec2 uv, float t) {
 	seabrite = nice((t-113.0)*0.3);
     buildings2 = 1.0-orbit; // TODO simplify?
     buildings = buildings2-sea;
-	startmove = nice((t-5.0)*0.1);
+	startmove = nice((t-7.0)*0.045);
 	
     float back = nice((t-142.0)*0.08);
     end = nice((t-169.0)*0.2);
     sea -= back; //nice((t-150.0)*0.1);
-    intro = nice((t-4.0)*0.1);
+    intro = nice((t-8.0)*0.1);
     intro -= back;
 	
 	struckfinal = nice((t-159.0)*0.2);
@@ -162,9 +162,9 @@ vec3 march(vec2 uv, float t) {
     ryz += buildings*(sin(t*0.1)*0.2-0.1);
    
     rxz += buildings*0.8;
-    rxz += cos(t*0.1)*0.3*sea + 0.2*sea;
+    rxz += cos(t*0.1)*0.3*sea + 0.0*sea;
     ryz -= 0.4 + 0.4*sea + cos(t*0.1)*0.4*sea;
-    float rxy = 0.5*sea;
+    float rxy = -0.2*sea;
     
     pR(origin.xy, rxy * intro);
     pR(origin.yz, ryz * intro);
@@ -215,7 +215,7 @@ void main()
     
     vec3 new = feedback*back + (0.2 + buildings*0.3)*stars + 0.0*vec3(noise-0.5);
 	//vec3 new = back*0.4 + 0.05*stars;
-    new *= 1.0-end;
+    new *= 1.0-end-max(0.,3.0-t);
     new = clamp(new, vec3(0.0), vec3(1.0));
     //new = new*0.001 + vec3(uv.x, uv.y, 0.0);
     gl_FragColor = vec4(new*2.0,1.0);
