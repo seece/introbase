@@ -4,7 +4,7 @@
 uniform float iTime;
 uniform sampler2D img;
 
-float buildings, buildings2, sea, seabrite, bust, intro, end, struckfinal, startmove;
+float buildings, buildings2, sea, seabrite, bust, intro, end, struckfinal, startmove, surface;
 const float PI=3.1415926536;
 
 float rand(in vec2 st) {
@@ -55,14 +55,14 @@ vec3 space(vec3 p, float t) {
     vec3 op=p;
     p.y = abs(p.y - buildings*10.0);
     p.z += t*0.5 + t*buildings2*0.5;
-    p.z -= pow(0.015*t, 4.0) + startmove*6.0;
+    p.z -= pow(0.015*t, 4.0) + startmove*6.0 + buildings*40.0;
     //p.x += sin(t*0.05)*buildings2*16.0;
     
     //p.y = abs(p.y-10.0);
     //vec3 col = abs(sin(p));
     //vec3 col = vec3(1.0, 0.5, 0.0);
     float side = abs(sin(p.x*0.2)*sin(p.z*0.2));
-    vec3 red = mix(vec3(1.0, 0.7, 0.1), vec3(0.05, 0.2, 0.9), sea);
+    vec3 red = mix(vec3(1.0, 0.7, 0.1), vec3(0.2, 0.3, 0.9), sea);
     vec3 col = mix(red, vec3(0.1, 0.9, 0.9), side);
     //float thick = snoise(p.xz*4.0 + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0);
     float thick = -0.00;
@@ -75,6 +75,9 @@ vec3 space(vec3 p, float t) {
         
     thick += buildings*bt;
     
+	//thick += -0.2 + 0.4*sea*snoise(p.yy*0.2);
+	
+	thick += 0.5*sin(p.y*0.3)*seabrite*abs(sin(t*0.07+1.0)); // TODO fix sync
     thick += (1.0-buildings) * (snoise(p.xz*(2.0) + vec2(t*0.0,t*0.1))+snoise(p.yy*3.0));
     thick += 0.3*sea - 0.3*seabrite;
 	thick += 0.3*sign(-op.y+4.9)*struckfinal;
@@ -111,7 +114,7 @@ vec3 face(vec3 p, float t) {
     for (float i=0.;i<1.0;i+=1./H) {
         float angle = (i)*2.*PI + (t - end)*0.5;
 		//float angle2 =(i)*2.*PI + PI*0.5;
-        float dist = 0.24 + cos(t*.5)*(0.05 + struckfinal*0.04) - 0.27*end;
+        float dist = 0.24 + sin(t*.5)*(0.05 + struckfinal*0.04) - 0.32*end;
         vec3 q = p + 1.0*vec3(
 			dist*cos(angle*1.0) + 0.0,
 			dist*sin(angle*1.0) ,
@@ -144,12 +147,15 @@ vec3 march(vec2 uv, float t) {
     buildings2 = 1.0-orbit; // TODO simplify?
     buildings = buildings2-sea;
 	startmove = nice((t-7.0)*0.045);
+	surface = nice((t-140.0)*0.1);
 	
-    float back = nice((t-142.0)*0.08);
-    end = nice((t-169.0)*0.2);
+    //float back = nice((t-142.0)*0.08);
+    float back = nice((t-160.0)*0.15); //147
+    end = nice((t-175.0)*0.2);
     sea -= back; //nice((t-150.0)*0.1);
     intro = nice((t-8.0)*0.1);
     intro -= back;
+	surface -= back*0.9;
 	
 	struckfinal = nice((t-159.0)*0.2);
     
@@ -159,10 +165,10 @@ vec3 march(vec2 uv, float t) {
     float ryz = orbit*0.4 - 0.2 + buildings*0.15 + 0.5;
     float rxz = orbit*0.7 + sin(t*0.1)*0.1*sea + sea*0.1;
     
-    ryz += buildings*(sin(t*0.1)*0.2-0.1);
+    ryz += buildings*(sin(t*0.1)*0.2-0.1) + 0.1 * surface;
    
     rxz += buildings*0.8;
-    rxz += cos(t*0.1)*0.3*sea + 0.0*sea;
+    rxz += cos(t*0.1)*0.3*sea  - 0.2*sea;
     ryz -= 0.4 + 0.4*sea + cos(t*0.1)*0.4*sea;
     float rxy = -0.2*sea;
     
@@ -185,6 +191,7 @@ vec3 march(vec2 uv, float t) {
     }
     
     accum *= mix(max(0., 1.0 - 0.1*sqrt(length(p-origin))), 1.0, buildings);
+	accum *= 1.0 + surface*abs(sin(length(p-origin) * 0.1))*2.0*cos(p.y*0.6);
     accum /= 1.0+buildings*0.4;
     float boost = pow(max(accum.x, max(accum.y, accum.z)), 2.0);
     return accum + vec3(boost);
