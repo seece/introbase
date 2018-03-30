@@ -1,1 +1,1 @@
-shader_minifier_114cce.exe -v --preserve-externals -o .\src\shaders\fragment.inl .\src\shaders\fragment.frag
+shader_minifier_114cce.exe -v --preserve-externals --no-renaming-list smootherstep,main -o .\src\shaders\fragment.inl .\src\shaders\fragment.frag

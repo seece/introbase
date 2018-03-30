@@ -2,7 +2,7 @@ del /q temp\*
 del music.exe
 del music_wav.exe
 
-..\convert\OidosConvert.exe music7.xrns temp\music.asm
+..\convert\OidosConvert.exe music8.xrns temp\music.asm
 
 copy ..\player\oidos.asm temp
 copy ..\player\random.asm temp
